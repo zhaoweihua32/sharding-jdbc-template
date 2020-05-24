@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.integration.dao.OrderItemDao">
+
+    <insert id="addOne" parameterType="org.example.integration.entity.OrderItem" useGeneratedKeys="true" keyProperty="orderItemId">
+        insert into t_order_item(user_id,order_id) values(#{userId},#{orderId})
+    </insert>
+
+    <select id="getByOrderId" resultType="org.example.integration.entity.OrderItem">
+        select * from t_order_item where order_id=#{id}
+    </select>
+
+    <select id="getOrderItemByPrice" resultType="org.example.integration.entity.OrderItem">
+        select a.* from t_order_item a inner join t_order b on a.order_id = b.order_id where b.price=#{price}
+    </select>
+
+</mapper>

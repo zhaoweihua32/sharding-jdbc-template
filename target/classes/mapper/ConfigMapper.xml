@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.integration.dao.ConfigDao">
+
+    <insert id="addOne" useGeneratedKeys="true" keyProperty="configId" parameterType="org.example.integration.entity.Config">
+        insert into t_config(para_name,para_value) values(#{paraName},#{paraValue})
+    </insert>
+
+</mapper>

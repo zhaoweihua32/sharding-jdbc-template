@@ -1,0 +1,63 @@
+sharding:
+  jdbc:
+    datasource:
+      # 数据源
+      names: ds0,ds1,ds2
+      ds0:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driver-class-name: com.mysql.jdbc.Driver
+        url: jdbc:mysql://localhost:3306/shard0?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&serverTimezone=Asia/Shanghai
+        username: root
+        password: Zwh12345
+      ds1:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driver-class-name: com.mysql.jdbc.Driver
+        url: jdbc:mysql://localhost:3306/shard1?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&serverTimezone=Asia/Shanghai
+        username: root
+        password: Zwh12345
+      ds2:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driver-class-name: com.mysql.jdbc.Driver
+        url: jdbc:mysql://localhost:3306/shard2?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&serverTimezone=Asia/Shanghai
+        username: root
+        password: Zwh12345
+
+
+
+    config:
+      sharding:
+        # 默认数据源，不分库分表到达这个数据源
+        default-data-source-name: ds2
+        #【默认分库策略】对user_id取模
+        default-database-strategy:
+          inline:
+            sharding-column: user_id
+            algorithm-expression: ds$->{user_id % 2}
+        # 【分表策略】
+        tables:
+          # config是广播表
+          t_config:
+            key-generator-column-name: config_id
+            actual-data-nodes: ds$->{0..1}.t_config
+          # user表只分库不分表
+          t_user:
+            key-generator-column-name: user_id
+            actual-data-nodes: ds$->{0..1}.t_user
+          # order表分库分表
+          t_order:
+            key-generator-column-name: order_id
+            actual-data-nodes: ds$->{0..1}.t_order$->{0..1}
+            table-strategy:
+              inline:
+                sharding-column: order_id
+                algorithm-expression: t_order$->{order_id%2}
+          # order_item表分库分表
+          t_order_item:
+            key-generator-column-name: item_id
+            actual-data-nodes: ds$->{0..1}.t_order_item$->{0..1}
+            table-strategy:
+              inline:
+                sharding-column: order_id
+                algorithm-expression: t_order_item$->{order_id%2}
+      props:
+        sql.show: true
