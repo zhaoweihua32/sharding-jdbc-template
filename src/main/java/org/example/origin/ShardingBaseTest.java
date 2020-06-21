@@ -4,8 +4,13 @@ import com.alibaba.druid.pool.DruidDataSource;
 import org.apache.shardingsphere.api.config.sharding.ShardingRuleConfiguration;
 import org.apache.shardingsphere.api.config.sharding.TableRuleConfiguration;
 import org.apache.shardingsphere.api.config.sharding.strategy.InlineShardingStrategyConfiguration;
+import org.apache.shardingsphere.api.config.sharding.strategy.StandardShardingStrategyConfiguration;
 import org.apache.shardingsphere.shardingjdbc.api.ShardingDataSourceFactory;
 import org.apache.shardingsphere.shardingjdbc.api.yaml.YamlShardingDataSourceFactory;
+import org.apache.shardingsphere.shardingjdbc.jdbc.core.datasource.ShardingDataSource;
+import org.example.origin.config.DBShardAlgo;
+import org.example.origin.config.TblPreShardAlgo;
+import org.example.origin.config.TblRangeShardAlgo;
 
 import javax.sql.DataSource;
 import java.io.File;
@@ -21,17 +26,17 @@ public class ShardingBaseTest {
 
     public static void main(String[] args) throws Exception {
         //1,测试无配置时的api
-//        testShardOriginApi();
+        testShardOriginApi();
 
         //2,测试yaml配置的api
-        testYamlApi();
+//        testYamlApi();
     }
 
     /**
      * 测试yaml方式配置
      */
     private static void testYamlApi() throws Exception{
-        DataSource dataSource = YamlShardingDataSourceFactory.createDataSource(new File("/Users/zhaoweihua/Desktop/书籍阅读/工具箱/Docker/Sharding-JDBC源码/sharding-test/src/main/resources/shardingConfig.yml"));
+        ShardingDataSource dataSource = (ShardingDataSource)YamlShardingDataSourceFactory.createDataSource(new File("/Users/zhaoweihua/Desktop/书籍阅读/工具箱/Docker/Sharding-JDBC源码/sharding-test/src/main/resources/shardingConfig.yml"));
         //1, 添加数据分片
 //        String sql = "insert into t_order_item(item_id,user_id,order_id) values (1,1,1),(2,2,2),(3,3,3),(4,4,4),(5,6,5),(6,5,6)";
 //        try (Connection conn = dataSource.getConnection();
@@ -58,29 +63,30 @@ public class ShardingBaseTest {
     /**
      * 测试无配置的api
      */
-    public static void  testShardOriginApi() throws Exception{
-        DataSource dateSource = getDateSource();
+    public static void  testShardOriginApi() throws Exception {
+        DataSource dataSource = getDateSource();
 
-          //1, 添加数据分片
-//        String sql = "insert into t_order(order_id, user_id) values (1,1),(2,2),(3,3),(4,4),(5,6),(6,5)";
-//        try (Connection conn = dataSource.getConnection();
-//             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-//            boolean executeSuccess = preparedStatement.execute();
-//            System.out.println(executeSuccess);
-//        }
-
-        //2, 查询数据
-        String sql1 = "SELECT order_id,user_id FROM t_order ";
-        try (
-                Connection conn = dateSource.getConnection();
-                PreparedStatement preparedStatement = conn.prepareStatement(sql1)) {
-            try (ResultSet rs = preparedStatement.executeQuery()) {
-                while(rs.next()) {
-                    System.out.println(rs.getInt("order_id") +"_" + rs.getInt("user_id"));
-                }
-            }
+        //1, 添加数据分片
+        String sql = "insert into t_order(order_id, user_id) values (1,1),(2,2),(3,3),(4,4),(5,6),(6,5)";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            boolean executeSuccess = preparedStatement.execute();
+            System.out.println(executeSuccess);
         }
+
+            //2, 查询数据
+//        String sql1 = "SELECT order_id,user_id FROM t_order ";
+//        try (
+//                Connection conn = dataSource.getConnection();
+//                PreparedStatement preparedStatement = conn.prepareStatement(sql1)) {
+//            try (ResultSet rs = preparedStatement.executeQuery()) {
+//                while (rs.next()) {
+//                    System.out.println(rs.getInt("order_id") + "_" + rs.getInt("user_id"));
+//                }
+//            }
+//        }
     }
+
 
     /**
      * 获取数据源
@@ -105,6 +111,49 @@ public class ShardingBaseTest {
         dataSource2.setPassword("Zwh12345");
         dataSourceMap.put("ds1", dataSource2);
 
+        //获取分片规则（行表达式分片策略）
+        ShardingRuleConfiguration shardingRuleConfig = getShardingRuleConfig0();
+        //获取分片规则（行表达式分片策略）
+        shardingRuleConfig = getShardingRuleConfig1();
+//        shardingRuleConfig = getShardingRuleConfig2();
+//        shardingRuleConfig = getShardingRuleConfig3();
+
+
+        // 获取数据源对象
+        return ShardingDataSourceFactory.createDataSource(dataSourceMap, shardingRuleConfig, new Properties());
+
+    }
+
+    /**
+     * 获取分片规则（标准分片策略）
+     * @return
+     */
+    private static ShardingRuleConfiguration getShardingRuleConfig1() {
+        // 配置Order表规则
+        TableRuleConfiguration orderTableRuleConfig = new TableRuleConfiguration("t_order","ds${0..1}.t_order${0..1}");
+
+        // 配置分库 + 分表策略
+        orderTableRuleConfig.setDatabaseShardingStrategyConfig(new StandardShardingStrategyConfiguration("user_id", new DBShardAlgo()));
+        orderTableRuleConfig.setTableShardingStrategyConfig(new StandardShardingStrategyConfiguration("order_id", new TblPreShardAlgo()));
+        orderTableRuleConfig.setTableShardingStrategyConfig(new StandardShardingStrategyConfiguration("order_id", new TblPreShardAlgo(),new TblRangeShardAlgo()));
+
+        // 配置分片规则
+        ShardingRuleConfiguration shardingRuleConfig = new ShardingRuleConfiguration();
+        shardingRuleConfig.getTableRuleConfigs().add(orderTableRuleConfig);
+//
+//        shardingRuleConfig.setDefaultDatabaseShardingStrategyConfig(new StandardShardingStrategyConfiguration("user_id", new DemoDatabaseShardingAlgorithm()));
+//        shardingRuleConfig.setDefaultTableShardingStrategyConfig(new StandardShardingStrategyConfiguration("user_id", new DemoTableShardingAlgorithm()));
+
+
+        return shardingRuleConfig;
+
+    }
+
+    /**
+     * 获取分片规则（行表达式分片策略）
+     * @return
+     */
+    private static ShardingRuleConfiguration getShardingRuleConfig0() {
         // 配置Order表规则
         TableRuleConfiguration orderTableRuleConfig = new TableRuleConfiguration("t_order","ds${0..1}.t_order${0..1}");
 
@@ -116,8 +165,8 @@ public class ShardingBaseTest {
         ShardingRuleConfiguration shardingRuleConfig = new ShardingRuleConfiguration();
         shardingRuleConfig.getTableRuleConfigs().add(orderTableRuleConfig);
 
-        // 获取数据源对象
-        return ShardingDataSourceFactory.createDataSource(dataSourceMap, shardingRuleConfig, new Properties());
+        return shardingRuleConfig;
+
 
     }
 
